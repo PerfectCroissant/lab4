@@ -252,7 +252,7 @@ int main()
                 std::cin >> author;
                 cout << "Жанр: ";
                 std::cin >> genre;
-                Book *book = new Book(title, author, genre);
+                Book *book = new Book(title, author, genre); // Создание указателя на выделенную для экземпляра класса Book область памяти
 
                 books.push_back(new BookEntry(book));
 

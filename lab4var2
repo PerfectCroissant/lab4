@@ -1,0 +1,410 @@
+#include <iostream>
+#include <chrono>
+using sys_clock = std::chrono::system_clock;
+#include <fstream>
+#include <vector>
+#include <string>
+#include <algorithm>
+using std::cout;
+using std::endl;
+using std::string;
+
+
+constexpr char DELIMITER = '\t';
+
+
+// Классы
+template <typename T1, typename T2>
+class Pair {
+public:
+    Pair() {}
+    Pair(const T1& first, const T2& second) : first(first), second(second) {}
+
+    void displayPair() const {
+        cout << first << ": " << second << endl;
+    }
+
+    void savePairToFile(std::ofstream& outFile) const {
+        outFile << first << DELIMITER << second << '\n';
+    }
+
+private:
+    T1 first;
+    T2 second;
+};
+
+
+class Book {
+protected:
+    string _title;
+    string _author;
+    string _genre;
+
+public:
+    Book(const string& title, const string& author, const string& genre)
+        : _title(title), _author(author), _genre(genre) {}
+
+    ~Book() {}
+
+    // Getters
+    const string& getTitle() const {
+        return _title;
+    }
+
+    const string& getAuthor() const {
+        return _author;
+    }
+
+    const string& getGenre() const {
+        return _genre;
+    }
+
+    // Setters
+    void setTitle(const string& title) {
+        _title = title;
+    }
+
+    void setAuthor(const string& author) {
+        _author = author;
+    }
+
+    void setGenre(const string& genre) {
+        _genre = genre;
+    }
+
+    // Output
+    virtual string getInfo(string delimiter = " ") const
+    {
+        return "Название книги: \"" + _title + "\""
+        + delimiter + "Автор: " + _author 
+        + delimiter + "Жанр книги: " + _genre;
+    }
+
+    void displayInfo() const {
+        cout << getInfo() << '\n';
+    }
+
+    void saveToFile(std::ofstream& outFile) const {
+        outFile << getInfo() << '\n';
+    }
+};
+
+
+struct Fiction: public Book 
+{
+    Fiction(const string& title, const string& author, const string& genre) : Book(title, author, genre) {}
+
+    string getInfo(string delimiter = " ") const override
+    {
+        return Book::getInfo() + "Наджанр: fiction";
+    }
+};
+
+
+struct Nonfiction: public Book 
+{
+    Nonfiction(const string& title, const string& author, const string& genre) : Book(title, author, genre) {}
+
+    string getInfo(string delimiter = " ") const override
+    {
+        return Book::getInfo() + "Наджанр: non-fiction";
+    }
+};
+
+
+struct BookEntry
+{
+    Book *const bookPtr;
+    unsigned quantity;
+
+    BookEntry(Book *const ptr): bookPtr(ptr) {}
+    BookEntry(Book *const ptr, const unsigned q): bookPtr(ptr), quantity(q) {}
+
+    ~BookEntry() { delete bookPtr; }
+};
+
+
+// Функции для работы с книгами
+string modifyBook(Book *bookPtr)
+{
+    cout << "Книга найдена. Что вы хотите изменить?" << endl;
+    cout << "1. Автора" << endl;
+    cout << "2. Название" << endl;
+    cout << "3. Жанр" << endl;
+
+    int choice;
+    cout << "Введите ваш выбор: ";
+    std::cin >> choice;
+    string output;
+
+    switch (choice) 
+    {
+        case 1: 
+        {
+            string title;
+            cout << "Введите название: ";
+            std::cin >> title;
+            bookPtr->setTitle(title);
+            output = "\tChanged title: " + title;
+            break;
+        }
+        case 2: 
+        {
+            string author;
+            cout << "Введите автора: ";
+            std::cin >> author;
+            bookPtr->setAuthor(author);
+            output = "\tChanged author: " + author;
+            break;
+        }
+        case 3: 
+        {
+            string genre;
+            cout << "Введите жанр: ";
+            std::cin >> genre;
+            bookPtr->setGenre(genre);
+            output = "\tChanged genre: " + genre;
+            break;
+        }
+        default:
+            cout << " — Неверный выбор." << endl;
+    return output;
+    }
+}
+
+
+void saveBooksToFile(const std::vector<BookEntry*>& books, const string& filename) 
+{
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) 
+    {
+        std::cerr << "Ошибка открытия файла для записи." << endl;
+        return;
+    }
+
+    for (const auto* bookEntryPtr : books) 
+    {
+        bookEntryPtr->bookPtr->saveToFile(outFile);
+    }
+
+    outFile.close();
+}
+
+
+void eraseEntry(std::vector<BookEntry*> &books, decltype(books.begin()) &it)
+{
+    delete (*it);
+    books.erase(it);
+}
+
+
+string currentTime()
+{
+    std::time_t time = sys_clock::to_time_t(sys_clock::now());
+    return std::ctime(&time);
+}
+
+
+int main() 
+{
+    setlocale(LC_ALL, "Russian");
+
+    std::vector<BookEntry*> books;
+
+    int choice;
+    string filename;
+    std::ofstream logs("output.txt", std::ios::app);
+    logs << "<date&time>\t<command>\t<description>\n"
+    << currentTime() << "\tLaunch\n";
+    cout << "Добро пожаловать в библиотеку!" << endl;
+
+    do 
+    {
+        cout << "Меню:\n"
+        << "0. Выйти \n"
+        << "1. Добавить книгу \n"
+        << "2. Изменить данные о книге \n"
+        << "3. Удалить книгу \n"
+        << "4. Найти книгу \n"
+        << "5. Вывести список книг \n"
+        << "6. Сохранить в файл \n"
+        << "7. Сортировать по автору" << endl;
+
+        cout << "Введите ваш выбор: ";
+        std::cin >> choice;
+        cout << endl;
+
+        switch (choice) 
+        {
+            case 0:
+                cout << "Выход..." << endl;
+                logs << currentTime() << "\tExit" << std::endl;
+                break;
+            // Добавить книгу
+            case 1: 
+            {
+                string title, author, genre;
+
+                cout << "Введите данные книги.\n"
+                << "Название: ";
+                std::cin >> title;
+                cout << "Автор: ";
+                std::cin >> author;
+                cout << "Жанр: ";
+                std::cin >> genre;
+                Book *book = new Book(title, author, genre);
+
+                books.push_back(new BookEntry(book));
+
+                logs << currentTime() << "\tAdded book\t" << book->getInfo() << '\n';
+                break;
+            }
+
+            // Изменить данные о книге
+            case 2: 
+            {
+                string title, author;
+                cout << "Введите данные книги: " << endl;
+                cout << "Название:";
+                std::cin >> title;
+                cout << "Автор:";
+                std::cin >> author;
+
+                auto it = std::find_if(
+                    books.begin(), books.end(), 
+                    [&](const BookEntry *be) { return be->bookPtr->getTitle() == title && be->bookPtr->getAuthor() == author; }
+                );
+            
+                if (it == books.end()) 
+                {
+                    cout << "Студент не найден." << endl;
+                    break;
+                } 
+                string bookInfo = (*it)->bookPtr->getInfo();
+                string temp = modifyBook((*it)->bookPtr);
+
+                if (temp.empty())
+                    break;
+                logs << currentTime() << "\tModified book\t" << bookInfo << temp << '\n';
+                break;
+            }
+
+            // Удалить книгу
+            case 3: 
+            {
+                string title, author;
+                unsigned quantity;
+                cout << "Введите данные книги для удаления:" << endl;
+                cout << "Имя: ";
+                std::cin >> title;
+                cout << "Фамилия: ";
+                std::cin >> author;
+                cout << "Книг удалить: ";
+                std::cin >> quantity;
+
+                auto it = std::find_if(
+                    books.begin(), books.end(), 
+                    [&](const BookEntry *be) { return be->bookPtr->getTitle() == title && be->bookPtr->getAuthor() == author; }
+                );
+
+                if (it == books.end()) 
+                {
+                    cout << "Книга не найдена." << endl;
+                    break;
+                }
+                
+                auto bookPtr = (*it)->bookPtr;
+                if ((*it)->quantity > quantity)  // Стандартный случай (уменьшить число книг в библиотеке)
+                    (*it)->quantity -= quantity;
+                else if ((*it)->quantity < quantity)  // Ошибка ввода
+                {
+                    cout << "Указано книг больше, чем есть в библиотеке (" << (*it)->quantity << ")." << endl;
+                    break;
+                }
+                else // Удалить книгу как уникальный объект
+                    eraseEntry(books, it);
+                cout << "Книги удалены." << endl;
+
+                logs << currentTime() << " / Delete books " << quantity << "/ " << "Название: \"" << title << "\" Автор: " << author << '\n';
+                break;
+            }
+
+            // Найти книгу
+            case 4: 
+            {
+                string title, author;
+                cout << "Введите данные книги для поиска:" << endl;
+                cout << "Название: ";
+                std::cin >> title;
+                cout << "Автор: ";
+                std::cin >> author;
+
+                logs << currentTime() << " / Searching for book / " << "Название: \"" << title << "\" Автор: " << author << " / ";
+
+                auto it = std::find_if(books.begin(), books.end(), [&](const Book* book) {
+                    return book->getTitle() == title && book->getAuthor() == author;
+                });
+
+                
+                if (it != books.end()) {
+                    auto &bookPtr = (*it)->bookPtr;
+                    bookPtr->displayInfo();
+                    logs << "Successfully\n";
+                } else
+                {
+                    cout << "Книга не найдена." << endl;
+                    logs << "Unsuccessfully\n";
+                }
+                
+                break;
+            }
+
+            // Вывести список книг
+            case 5: 
+            {
+                cout << "Список студентов:" << endl;
+                for (const auto* bookEntryPtr : books)
+                    bookEntryPtr->bookPtr->displayInfo();
+                    cout << endl;
+                logs << currentTime() << " / Show library\n";
+                break;
+            }
+
+            // Сохранить в файл
+            case 6: 
+            {
+                cout << "Введите имя файла для сохранения данных: ";
+                std::cin >> filename;
+                if (filename == "output.txt")
+                {
+                    cout << "Неразрешённое имя файла" << endl;
+                    break;
+                }
+                saveBooksToFile(books, filename);
+                logs << currentTime() << " / Save library to file\n";
+                break;
+            }
+
+            // Сортировать по автору
+            case 7: 
+            {
+                std::sort(
+                    books.begin(), books.end(),
+                    [&](const BookEntry* bookEntryPtr1, const BookEntry* bookEntryPtr2) {return bookEntryPtr1->bookPtr->getAuthor() < bookEntryPtr2->bookPtr->getAuthor();}
+                );
+                cout << "Список книг отсортирован по автору." << endl;
+                saveBooksToFile(books, "output.txt");
+                logs << currentTime() << " / Sort library by author\n";
+                break;
+            }
+
+            default:
+                cout << "Неверный выбор." << endl;
+        }
+    } while (choice);
+
+    for (const auto* book : books) {
+        delete book;
+    }
+    return 0;
+}

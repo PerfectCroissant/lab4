@@ -117,7 +117,7 @@ struct BookEntry
     Book *const bookPtr;
     unsigned quantity;
 
-    BookEntry(Book *const ptr): bookPtr(ptr) {}
+    BookEntry(Book *const ptr): bookPtr(ptr), quantity(1) {}
     BookEntry(Book *const ptr, const unsigned q): bookPtr(ptr), quantity(q) {}
 
     ~BookEntry() { delete bookPtr; }
@@ -252,9 +252,11 @@ int main()
                 std::cin >> author;
                 cout << "Жанр: ";
                 std::cin >> genre;
+                cout << "Количество: ";
+                std::cin >> quantity;
                 Book *book = new Book(title, author, genre); // Создание указателя на выделенную для экземпляра класса Book область памяти
 
-                books.push_back(new BookEntry(book));
+                books.push_back(new BookEntry(book, quantity));
 
                 logs << currentTime() << "\tAdded book\t" << book->getInfo() << '\n';
                 break;
@@ -265,22 +267,22 @@ int main()
             {
                 string title, author;
                 cout << "Введите данные книги: " << endl;
-                cout << "Название:";
+                cout << "Название: ";
                 std::cin >> title;
-                cout << "Автор:";
+                cout << "Автор: ";
                 std::cin >> author;
 
                 auto it = std::find_if(
                     books.begin(), books.end(), 
-                    [&](const BookEntry *be) { return be->bookPtr->getTitle() == title && be->bookPtr->getAuthor() == author; }
+                    [&](const BookEntry *be) { return be->bookPtr->getTitle() == title && be->bookPtr->getAuthor() == author; } // Поиск книги в books
                 );
             
                 if (it == books.end()) 
                 {
-                    cout << "Студент не найден." << endl;
+                    cout << "Книга не найдена." << endl;
                     break;
                 } 
-                string bookInfo = (*it)->bookPtr->getInfo();
+                string bookInfo = (*it)->bookPtr->getInfo(); //
                 string temp = modifyBook((*it)->bookPtr);
 
                 if (temp.empty())
@@ -295,9 +297,9 @@ int main()
                 string title, author;
                 unsigned quantity;
                 cout << "Введите данные книги для удаления:" << endl;
-                cout << "Имя: ";
+                cout << "Название: ";
                 std::cin >> title;
-                cout << "Фамилия: ";
+                cout << "Автор: ";
                 std::cin >> author;
                 cout << "Книг удалить: ";
                 std::cin >> quantity;
@@ -362,7 +364,7 @@ int main()
             // Вывести список книг
             case 5: 
             {
-                cout << "Список студентов:" << endl;
+                cout << "Список книг: " << endl;
                 for (const auto* bookEntryPtr : books)
                     bookEntryPtr->bookPtr->displayInfo();
                     cout << endl;
